@@ -33,7 +33,7 @@ byte sent_data;
 bool isLow;
 
 void setup() {
-  // Declares arduino as slave using address 0xA
+  // Declares arduino as slave using address 0x8
   Wire.begin(0x8);
 
   // sets event function handler
@@ -55,8 +55,12 @@ void setup() {
 }
 
 void loop() {
-  //temperature_measure = analogRead(TEMPERATURE_PIN);
+  temperature_measure = analogRead(TEMPERATURE_PIN);
   battery_level = analogRead(BATTERY_PIN);
+
+  Serial.println(battery_level);
+
+  sent_data = map(temperature_measure, 0, 1023, 0, 255);
 
   switch(I2CRead) {
     case READ_LIGHT_INSTR:
@@ -64,11 +68,15 @@ void loop() {
     case READ_MOTION_INSTR:
     case READ_SOUND_INSTR:
       sent_data = map(temperature_measure, 0, 1023, 0, 255);
+      I2CRead = -1;
+      break;
     case MOVE_FORWARD:
       move_forward();
+      I2CRead = -1;
       break;
     case MOVE_BACKWARDS:
       move_backwards();
+      I2CRead = -1;
       break;
   }
 
@@ -85,13 +93,17 @@ void loop() {
     }
   }
 
-  if(battery_level <= BATTERY_TH && !isLow) {
-    isLow = true;
-    digitalWrite(BATTERY_LED, HIGH);
-  } else {
-    digitalWrite(BATTERY_LED, LOW);
+  // warns about low servo battery
+  if(battery_level <= BATTERY_TH) {
+    if(isLow) {
+      digitalWrite(BATTERY_LED, HIGH);
+      isLow = false;
+    } else {
+      digitalWrite(BATTERY_LED, LOW);
+      isLow = true;
+    }
   }
-
+  
   delay(1000);
 }
 
